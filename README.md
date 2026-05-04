@@ -1,36 +1,71 @@
-# 🏗️ AWS Multi-Tier Web Application — Terraform Project
+# 🚀 AWS Multi-Tier Web Application using Terraform
 
-A fully automated, production-ready multi-tier web application deployed on AWS using Terraform modules.
+## 📌 Overview
 
----
+This project demonstrates how to build a **highly available, scalable, and secure multi-tier web application** on AWS using **Terraform (Infrastructure as Code)**.
 
-## 🏛️ Architecture Overview
+The architecture follows best practices by separating the application into multiple layers:
 
-```
-Internet
-    ↓
-Application Load Balancer (Public Subnets)
-    ↓
-Web/App EC2 Instances (Private Subnets)
-    ↓
-RDS MySQL Database (Private Subnets, Multi-AZ)
-```
+* 🌐 Presentation Layer (ALB)
+* ⚙️ Application Layer (EC2 in Private Subnets)
+* 🛢️ Data Layer (RDS - Multi AZ)
 
 ---
 
-## ✅ What's Deployed
+## 🏗️ Architecture
 
-| Resource | Details |
-|----------|---------|
-| **VPC** | CIDR `10.0.0.0/16` |
-| **Public Subnets** | `10.0.10.0/24` (us-east-1a), `10.0.20.0/24` (us-east-1b) |
-| **Private Subnets** | `10.0.100.0/24` (us-east-1a), `10.0.200.0/24` (us-east-1b) |
-| **NAT Gateways** | 2x (one per AZ) |
-| **EC2 Instances** | 2x Ubuntu, encrypted EBS, Apache web server |
-| **Load Balancer** | Application LB, internet-facing, HTTP:80 |
-| **Auto Scaling Group** | Target tracking, min=2, max=4 |
-| **RDS** | MySQL, Multi-AZ, encrypted, Secrets Manager |
-| **Security** | Least-privilege security groups, no hardcoded credentials |
+![AWS Architecture](images/architecture.svg)
+
+---
+
+## 🧱 Infrastructure Components
+
+### 🌐 Networking
+
+* Custom VPC (`10.0.0.0/16`)
+* 2 Public Subnets (ALB)
+* 2 Private Subnets (EC2 + RDS)
+* Internet Gateway
+* NAT Gateways (one per AZ)
+* Route Tables (public & private)
+
+---
+
+### ⚙️ Compute
+
+* 2 EC2 instances (Apache Web Server)
+* Auto Scaling Group for elasticity
+* Encrypted EBS volumes
+
+---
+
+### ⚖️ Load Balancing
+
+* Application Load Balancer (ALB)
+* Target Group with health checks
+* HTTP listener (Port 80)
+![Load Balancer Active](images/Screenshot%202026-05-03%20222218.png)
+![Target Group Health](images/Screenshot%202026-05-03%20222105.png)
+---
+
+### 🛢️ Database
+
+* Amazon RDS (MySQL)
+* Multi-AZ enabled
+* Private subnet deployment
+* Secure access via Security Groups
+![RDS Instance](images/Screenshot%202026-05-03%20222353.png)
+---
+
+### 🔐 Security
+
+* Security Groups:
+
+  * ALB SG (HTTP from Internet)
+  * Web SG (HTTP from ALB only)
+  * DB SG (MySQL from Web only)
+* Secrets Manager for DB credentials
+* Encrypted storage (EBS + RDS)
 
 ---
 
@@ -38,65 +73,154 @@ RDS MySQL Database (Private Subnets, Multi-AZ)
 
 ```
 terraform-project/
+│
 ├── main.tf
 ├── variables.tf
 ├── outputs.tf
-├── terraform.tfvars
-└── modules/
-    ├── vpc/
-    ├── subnets/
-    ├── nat/
-    ├── security/
-    ├── ec2/
-    ├── alb/
-    ├── asg/
-    └── rds/
+│
+├── modules/
+│   ├── vpc/
+│   ├── subnets/
+│   ├── nat/
+│   ├── security/
+│   ├── ec2/
+│   ├── alb/
+│   ├── autoscaling/
+│   ├── rds/
 ```
 
 ---
 
-## 🔐 Security Highlights
+## ⚙️ Prerequisites
 
-- RDS credentials generated via `random_password` and stored in **AWS Secrets Manager**
-- EBS volumes **encrypted at rest**
-- EC2 instances in **private subnets** — no direct internet exposure
-- Security groups follow **least-privilege**: ALB → Web → RDS only
-- SSM Session Manager used for instance access — **no SSH keys or bastion host**
+* AWS Account
+* Terraform installed
+* AWS CLI configured
+
+```bash
+aws configure
+```
 
 ---
 
-## 🚀 How to Deploy
+## 🚀 Deployment Steps
+
+### 1️⃣ Initialize Terraform
 
 ```bash
-# 1. Initialize
 terraform init
-
-# 2. Preview changes
-terraform plan
-
-# 3. Deploy
-terraform apply -auto-approve
 ```
 
-After deploy, the ALB DNS will be shown in the outputs:
-```
-alb_dns = "tf-lb-xxxx.us-east-1.elb.amazonaws.com"
-```
-
----
-
-## 🧹 How to Destroy
+### 2️⃣ Validate Configuration
 
 ```bash
-terraform destroy -auto-approve
+terraform validate
 ```
 
-> ⚠️ Always destroy resources after testing to avoid unexpected AWS charges.
+### 3️⃣ Preview Infrastructure
+
+```bash
+terraform plan
+```
+
+### 4️⃣ Apply Configuration
+
+```bash
+terraform apply
+```
+![Terraform Apply Success](images/Screenshot%202026-05-03%20130102.png)
 
 ---
 
-## 🛠️ Tech Stack
+## 🌍 Access the Application
 
-![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=flat&logo=terraform&logoColor=white)
-![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat&logo=amazon-aws&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
+After deployment, Terraform will output:
+
+```bash
+alb_dns = <your-alb-dns>
+```
+
+👉 Open it in your browser:
+
+```
+http://<alb_dns>
+```
+
+You should see:
+
+```
+This is server 1...
+```
+
+Refresh multiple times to verify **Load Balancing** 
+- Server A  
+![Server A](images/server-a.png.png)
+- Server B  
+![Server B](images/server-b.png.png)
+---
+
+## 🧪 Testing
+
+### ✅ Check Load Balancer
+
+* Refresh browser → traffic should rotate between instances
+
+### ✅ Check Target Health
+
+* AWS Console → Target Groups → Targets → Healthy
+
+### ✅ Check EC2
+
+```bash
+curl localhost
+```
+
+---
+
+## 🧹 Destroy Infrastructure
+
+To avoid charges:
+
+```bash
+terraform destroy
+```
+
+---
+
+## 🔥 Key Features
+
+* ✔️ High Availability (Multi-AZ)
+* ✔️ Auto Scaling
+* ✔️ Secure Architecture (Private Subnets)
+* ✔️ Secrets Management
+* ✔️ Infrastructure as Code (Terraform)
+* ✔️ Production-ready Design
+
+---
+
+## 🚀 Future Improvements
+
+* 🔐 HTTPS (ACM + ALB)
+* 🌍 Custom Domain (Route53)
+* 📊 Monitoring (CloudWatch)
+* 🔄 CI/CD (GitHub Actions)
+* 🛡️ WAF Integration
+
+
+## ⭐ Notes
+
+* Ensure NAT Gateway is configured correctly for private instances
+* Do not expose database publicly
+* Always use Secrets Manager for credentials
+
+---
+
+## 🎯 Conclusion
+
+This project provides a **real-world production-grade AWS architecture** that demonstrates:
+
+* Scalability
+* Security
+* High Availability
+* Automation
+
